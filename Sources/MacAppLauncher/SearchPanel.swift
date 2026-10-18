@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 
 final class KeyPanel: NSPanel {
     override var canBecomeKey: Bool { true }
@@ -16,6 +17,9 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     private var iconCache: [String: NSImage] = [:]
     private let rowHeight: CGFloat = 40
     private let maxRows = 9
+    private var warmed = false
+    private var glassHeight: NSLayoutConstraint!
+    private var maxHeight: CGFloat { 60 + CGFloat(maxRows) * rowHeight + 16 }
 
     // Compteur de lancements gardé en mémoire, écrit sur disque seulement à l'ouverture d'une app.
     private var usage: [String: Int] = UserDefaults.standard.dictionary(forKey: "usage") as? [String: Int] ?? [:]
@@ -30,6 +34,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         setupPanel()
         scanner.onChange = { [weak self] in
             guard let self else { return }
+            if !self.warmed { self.warmed = true; self.prewarm() }
             self.preloadIcons()
             if self.panel.isVisible { self.refresh() }
         }
@@ -58,7 +63,20 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         glass.cornerRadius = 26
         glass.style = .regular
         glass.contentView = bg
-        panel.contentView = glass
+        // La fenêtre garde sa taille maximale ; seul le verre change de hauteur.
+        // Redimensionner la fenêtre elle-même coûtait jusqu'à 360 ms par frappe.
+        let root = NSView()
+        panel.contentView = root
+        glass.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(glass)
+        glassHeight = glass.heightAnchor.constraint(equalToConstant: 60)
+        NSLayoutConstraint.activate([
+            glass.topAnchor.constraint(equalTo: root.topAnchor),
+            glass.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            glass.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            glassHeight,
+        ])
+        panel.setContentSize(NSSize(width: 640, height: maxHeight))
 
         field.placeholderString = "Rechercher une app…"
         field.font = .systemFont(ofSize: 22, weight: .light)
@@ -107,6 +125,19 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
 
     // MARK: - Affichage
 
+    /// Premier rendu du verre à pleine taille, payé au lancement plutôt qu'à la première frappe.
+    func prewarm() {
+        panel.alphaValue = 0
+        panel.orderFront(nil)
+        field.stringValue = "a"
+        refresh()
+        panel.displayIfNeeded()
+        field.stringValue = ""
+        refresh()
+        panel.orderOut(nil)
+        panel.alphaValue = 1
+    }
+
     func toggle() {
         panel.isVisible ? hide() : show()
     }
@@ -134,19 +165,36 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     }
 
     private func refresh() {
+        let t0 = CACurrentMediaTime()
         results = Matcher.search(field.stringValue, in: scanner.apps, usage: usage)
+        let t1 = CACurrentMediaTime()
         table.reloadData()
         if !results.isEmpty { table.selectRowIndexes([0], byExtendingSelection: false) }
+        table.layoutSubtreeIfNeeded()
+        let t2 = CACurrentMediaTime()
         resize()
+        panel.displayIfNeeded()
+        let t3 = CACurrentMediaTime()
+        if ProcessInfo.processInfo.environment["BENCH"] != nil {
+            print(String(format: "%@ match %.1f ms | table %.1f ms | resize+draw %.1f ms", field.stringValue, (t1-t0)*1000, (t2-t1)*1000, (t3-t2)*1000))
+        }
+    }
+
+    func bench() {
+        show()
+        var q = ""
+        for c in "webstorm" { q.append(c); field.stringValue = q; refresh() }
+        for _ in 0..<3 { q.removeLast(); field.stringValue = q; refresh() }
+        for r in ["", "s", "sa", "", "c", "cl", "zzzz", "w"] { field.stringValue = r; refresh() }
+        exit(0)
     }
 
     private func resize() {
         let rows = min(results.count, maxRows)
         let height: CGFloat = 60 + (rows > 0 ? CGFloat(rows) * rowHeight + 16 : 0)
-        var frame = panel.frame
-        frame.origin.y += frame.height - height
-        frame.size.height = height
-        panel.setFrame(frame, display: true)
+        guard glassHeight.constant != height else { return }
+        glassHeight.constant = height
+        panel.invalidateShadow()
     }
 
     // MARK: - Clavier

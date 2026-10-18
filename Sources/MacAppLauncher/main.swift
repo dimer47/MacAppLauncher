@@ -19,6 +19,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             (self?.search.handleCommandDigit(e) ?? false) ? nil : e
         }
 
+        if ProcessInfo.processInfo.environment["BENCH"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { self.search.bench() }
+        }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(systemSymbolName: "square.grid.3x3.fill", accessibilityDescription: "MacAppLauncher")
         let menu = NSMenu()

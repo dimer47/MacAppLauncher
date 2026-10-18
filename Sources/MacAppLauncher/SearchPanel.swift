@@ -199,6 +199,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         cell.name.stringValue = app.name
         cell.path.stringValue = app.url.deletingLastPathComponent().path
             .replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
+            .replacingOccurrences(of: ".localized", with: "")
         cell.icon.image = icon(for: app)
         cell.shortcut.stringValue = row < 9 ? "⌘\(row + 1)" : ""
         return cell

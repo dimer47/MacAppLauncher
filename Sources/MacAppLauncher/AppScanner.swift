@@ -113,11 +113,7 @@ final class AppScanner {
 enum Matcher {
     static func search(_ query: String, in apps: [AppEntry], usage: [String: Int]) -> [AppEntry] {
         let q = AppScanner.normalize(query.trimmingCharacters(in: .whitespaces))
-        if q.isEmpty {
-            return apps.filter { (usage[$0.url.path] ?? 0) > 0 }
-                .sorted { (usage[$0.url.path] ?? 0) > (usage[$1.url.path] ?? 0) }
-                .prefix(9).map { $0 }
-        }
+        if q.isEmpty { return [] }
         var scored: [(AppEntry, Int)] = []
         for app in apps {
             guard var s = score(q, app) else { continue }

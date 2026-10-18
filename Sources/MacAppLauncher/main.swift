@@ -23,11 +23,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if ProcessInfo.processInfo.environment["BENCH"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { self.search.bench() }
         }
+        let atLogin = launchedAtLogin
+        if !atLogin && ProcessInfo.processInfo.environment["BENCH"] == nil {
+            // Premier lancement manuel : attendre la fin du scan avant d'ouvrir.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { self.search.show() }
+        }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(systemSymbolName: "square.grid.3x3.fill", accessibilityDescription: "MacAppLauncher")
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
+    }
+
+    /// Relancer l'app (Finder, Dock, lanceur) ouvre la recherche, comme le raccourci.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        search.show()
+        return false
+    }
+
+    /// Vrai si macOS a lancé l'app à l'ouverture de session : on reste alors discret.
+    private var launchedAtLogin: Bool {
+        guard let ev = NSAppleEventManager.shared().currentAppleEvent else { return false }
+        return ev.eventID == kAEOpenApplication
+            && ev.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
     }
 
     /// Sans menu Édition, une app de barre des menus ne reçoit pas ⌘A, ⌘C, ⌘V, ⌘X, ⌘Z.

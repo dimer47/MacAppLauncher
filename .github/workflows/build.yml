@@ -1,0 +1,35 @@
+name: Compilation
+
+# À chaque poussée et pull request : compile en Release et vérifie que la
+# recherche trouve des apps sur le runner (BENCH=1 lance une frappe simulée).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  compiler:
+    name: Compiler
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compiler
+        run: swift build -c release
+
+      - name: Tester le scan et la recherche
+        run: |
+          cp Sources/MacAppLauncher/AppScanner.swift "$RUNNER_TEMP/"
+          cat > "$RUNNER_TEMP/main.swift" <<'SWIFT'
+          import Foundation
+          let apps = AppScanner.scan()
+          print("Apps trouvées :", apps.count)
+          precondition(apps.count > 10, "trop peu d'apps trouvées")
+          let r = Matcher.search("safari", in: apps, usage: [:])
+          precondition(r.first?.name == "Safari", "Safari introuvable")
+          precondition(Matcher.search("", in: apps, usage: [:]).isEmpty)
+          print("OK")
+          SWIFT
+          swiftc -O "$RUNNER_TEMP"/*.swift -o "$RUNNER_TEMP/test"
+          "$RUNNER_TEMP/test"

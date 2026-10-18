@@ -19,7 +19,10 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     private let maxRows = 9
     private var warmed = false
     private var glassHeight: NSLayoutConstraint!
-    private var maxHeight: CGFloat { 60 + CGFloat(maxRows) * rowHeight + 16 }
+    private var maxHeight: CGFloat { height(rows: maxRows) + 24 }
+
+    /// Hauteur exacte du verre : champ (56) + lignes + marge basse, sans ligne coupée.
+    private func height(rows: Int) -> CGFloat { rows > 0 ? 56 + CGFloat(rows) * rowHeight + 10 : 60 }
 
     // Compteur de lancements gardé en mémoire, écrit sur disque seulement à l'ouverture d'une app.
     private var usage: [String: Int] = UserDefaults.standard.dictionary(forKey: "usage") as? [String: Int] ?? [:]
@@ -55,7 +58,8 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
 
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        // Pas d'ombre de fenêtre : elle suit le rectangle de la fenêtre, pas les coins arrondis du verre.
+        panel.hasShadow = false
 
         // Liquid Glass (macOS 26) : le verre porte le contenu.
         let bg = NSView()
@@ -68,15 +72,22 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         let root = NSView()
         panel.contentView = root
         glass.translatesAutoresizingMaskIntoConstraints = false
+        root.wantsLayer = true
+        root.layer?.masksToBounds = false
+        glass.wantsLayer = true
+        glass.layer?.shadowColor = NSColor.black.cgColor
+        glass.layer?.shadowOpacity = 0.35
+        glass.layer?.shadowRadius = 18
+        glass.layer?.shadowOffset = CGSize(width: 0, height: -8)
         root.addSubview(glass)
         glassHeight = glass.heightAnchor.constraint(equalToConstant: 60)
         NSLayoutConstraint.activate([
-            glass.topAnchor.constraint(equalTo: root.topAnchor),
-            glass.leadingAnchor.constraint(equalTo: root.leadingAnchor),
-            glass.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            glass.topAnchor.constraint(equalTo: root.topAnchor, constant: 12),
+            glass.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 24),
+            glass.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -24),
             glassHeight,
         ])
-        panel.setContentSize(NSSize(width: 640, height: maxHeight))
+        panel.setContentSize(NSSize(width: 640 + 48, height: maxHeight))
 
         field.placeholderString = "Rechercher une app…"
         field.font = .systemFont(ofSize: 22, weight: .light)
@@ -119,7 +130,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
             scroll.leadingAnchor.constraint(equalTo: bg.leadingAnchor, constant: 6),
             scroll.trailingAnchor.constraint(equalTo: bg.trailingAnchor, constant: -6),
             scroll.topAnchor.constraint(equalTo: field.bottomAnchor, constant: 10),
-            scroll.bottomAnchor.constraint(equalTo: bg.bottomAnchor, constant: -6),
+            scroll.bottomAnchor.constraint(equalTo: bg.bottomAnchor, constant: -10),
         ])
     }
 
@@ -191,10 +202,9 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
 
     private func resize() {
         let rows = min(results.count, maxRows)
-        let height: CGFloat = 60 + (rows > 0 ? CGFloat(rows) * rowHeight + 16 : 0)
+        let height = self.height(rows: rows)
         guard glassHeight.constant != height else { return }
         glassHeight.constant = height
-        panel.invalidateShadow()
     }
 
     // MARK: - Clavier

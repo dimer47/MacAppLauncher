@@ -236,10 +236,11 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         let r = table.selectedRow
         guard results.indices.contains(r) else { return }
         let app = results[r]
-        usage[app.url.path, default: 0] += 1
+        usage[app.id, default: 0] += 1
         UserDefaults.standard.set(usage, forKey: "usage")
         hide()
-        NSWorkspace.shared.openApplication(at: app.url, configuration: NSWorkspace.OpenConfiguration())
+        if let u = app.openURL { NSWorkspace.shared.open(u) }
+        else { NSWorkspace.shared.openApplication(at: app.url, configuration: NSWorkspace.OpenConfiguration()) }
     }
 
     // MARK: - Table
@@ -255,7 +256,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         let cell = (tableView.makeView(withIdentifier: .init("cell"), owner: nil) as? AppCell) ?? AppCell()
         cell.identifier = .init("cell")
         cell.name.stringValue = app.name
-        cell.path.stringValue = app.url.deletingLastPathComponent().path
+        cell.path.stringValue = app.isSettingsPane ? "Réglages Système" : app.url.deletingLastPathComponent().path
             .replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
             .replacingOccurrences(of: ".localized", with: "")
         cell.icon.image = icon(for: app)

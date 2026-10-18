@@ -20,7 +20,7 @@ jobs:
 
       - name: Tester le scan et la recherche
         run: |
-          cp Sources/MacAppLauncher/AppScanner.swift "$RUNNER_TEMP/"
+          cp Sources/MacAppLauncher/AppScanner.swift Sources/MacAppLauncher/SystemSettings.swift "$RUNNER_TEMP/"
           cat > "$RUNNER_TEMP/main.swift" <<'SWIFT'
           import Foundation
           let apps = AppScanner.scan()

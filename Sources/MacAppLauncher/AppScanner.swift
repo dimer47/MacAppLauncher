@@ -5,6 +5,11 @@ struct AppEntry {
     let url: URL
     let searchKey: String
     let initials: String
+    /// Pour un panneau de Réglages : l'URL à ouvrir au lieu de l'app.
+    var openURL: URL? = nil
+
+    var id: String { openURL?.absoluteString ?? url.path }
+    var isSettingsPane: Bool { openURL != nil }
 }
 
 /// Liste les .app des dossiers d'applications, sans passer par Spotlight.
@@ -63,6 +68,7 @@ final class AppScanner {
                 result.append(AppEntry(name: name, url: url, searchKey: key, initials: initials(of: name)))
             }
         }
+        result += SystemSettingsPanes.entries()
         return result.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
@@ -117,7 +123,7 @@ enum Matcher {
         var scored: [(AppEntry, Int)] = []
         for app in apps {
             guard var s = score(q, app) else { continue }
-            s += min(usage[app.url.path] ?? 0, 50)
+            s += min(usage[app.id] ?? 0, 50)
             scored.append((app, s))
         }
         return scored.sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.name.count < $1.0.name.count }.map(\.0)
@@ -125,6 +131,8 @@ enum Matcher {
 
     private static func score(_ q: String, _ app: AppEntry) -> Int? {
         let key = app.searchKey
+        if key == q || key.hasPrefix(q + " ") { return 1200 }
+        if key.split(separator: " ").contains(where: { $0 == q }) { return 1100 }
         if key.hasPrefix(q) { return 1000 }
         if app.initials.hasPrefix(q) { return 800 }
         if key.contains(" " + q) || key.contains("-" + q) { return 600 }

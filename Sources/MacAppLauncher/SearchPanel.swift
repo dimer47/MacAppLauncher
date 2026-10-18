@@ -17,10 +17,9 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     private let rowHeight: CGFloat = 40
     private let maxRows = 9
 
-    private var usage: [String: Int] {
-        get { UserDefaults.standard.dictionary(forKey: "usage") as? [String: Int] ?? [:] }
-        set { UserDefaults.standard.set(newValue, forKey: "usage") }
-    }
+    // Compteur de lancements gardé en mémoire, écrit sur disque seulement à l'ouverture d'une app.
+    private var usage: [String: Int] = UserDefaults.standard.dictionary(forKey: "usage") as? [String: Int] ?? [:]
+    private let iconQueue = DispatchQueue(label: "icons", qos: .utility)
 
     init(scanner: AppScanner) {
         self.scanner = scanner
@@ -30,8 +29,9 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         super.init()
         setupPanel()
         scanner.onChange = { [weak self] in
-            guard let self, self.panel.isVisible else { return }
-            self.refresh()
+            guard let self else { return }
+            self.preloadIcons()
+            if self.panel.isVisible { self.refresh() }
         }
     }
 
@@ -105,7 +105,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     }
 
     func show() {
-        field.stringValue = ""
+        // On garde la recherche précédente, sélectionnée : taper la remplace.
         refresh()
         if let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
             let f = screen.visibleFrame
@@ -115,6 +115,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         panel.makeFirstResponder(field)
+        field.currentEditor()?.selectAll(nil)
     }
 
     func hide() {
@@ -170,9 +171,8 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         let r = table.selectedRow
         guard results.indices.contains(r) else { return }
         let app = results[r]
-        var u = usage
-        u[app.url.path, default: 0] += 1
-        usage = u
+        usage[app.url.path, default: 0] += 1
+        UserDefaults.standard.set(usage, forKey: "usage")
         hide()
         NSWorkspace.shared.openApplication(at: app.url, configuration: NSWorkspace.OpenConfiguration())
     }
@@ -193,11 +193,26 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         return cell
     }
 
-    private func icon(for app: AppEntry) -> NSImage {
-        if let i = iconCache[app.url.path] { return i }
-        let i = NSWorkspace.shared.icon(forFile: app.url.path)
-        iconCache[app.url.path] = i
-        return i
+    private func icon(for app: AppEntry) -> NSImage? {
+        iconCache[app.url.path]
+    }
+
+    /// Charge toutes les icônes en arrière-plan après chaque scan : la frappe ne lit jamais le disque.
+    private func preloadIcons() {
+        let missing = scanner.apps.map(\.url.path).filter { iconCache[$0] == nil }
+        guard !missing.isEmpty else { return }
+        iconQueue.async {
+            var loaded: [String: NSImage] = [:]
+            for path in missing {
+                let img = NSWorkspace.shared.icon(forFile: path)
+                img.size = NSSize(width: 32, height: 32)
+                loaded[path] = img
+            }
+            DispatchQueue.main.async {
+                self.iconCache.merge(loaded) { a, _ in a }
+                if self.panel.isVisible { self.table.reloadData() }
+            }
+        }
     }
 
     /// ⌘1 à ⌘9 ouvrent directement le résultat correspondant.

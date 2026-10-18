@@ -25,6 +25,8 @@ MacAppLauncher simply lists the `.app` bundles in the application folders itself
 - **Always up to date** — FSEvents watch the folders, the list refreshes when you install or remove an app.
 - **Liquid Glass** — native macOS 26 glass panel.
 - **Lightweight** — ~55 MB of memory, no dependencies, lives in the menu bar.
+- **System Settings panes** — type `sound`, `wifi`, `clavier`… to open the pane directly.
+- **Apple menu actions** — sleep, restart, shut down, lock screen, log out.
 - **Launch at login** — one click in the menu.
 
 ### Scanned folders

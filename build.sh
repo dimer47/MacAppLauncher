@@ -28,7 +28,7 @@ if [[ " $* " == *" --notarize "* ]]; then
 fi
 
 if [[ " $* " != *" --no-install "* ]]; then
-  pkill -x MacAppLauncher || true
+  pkill -x MacAppLauncher && sleep 1 || true
   rm -rf /Applications/MacAppLauncher.app
   cp -R "$APP" /Applications/
   open /Applications/MacAppLauncher.app

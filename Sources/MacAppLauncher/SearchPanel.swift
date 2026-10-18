@@ -239,7 +239,8 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         usage[app.id, default: 0] += 1
         UserDefaults.standard.set(usage, forKey: "usage")
         hide()
-        if let u = app.openURL { NSWorkspace.shared.open(u) }
+        if let u = app.openURL, app.isAction { SystemActions.run(u) }
+        else if let u = app.openURL { NSWorkspace.shared.open(u) }
         else { NSWorkspace.shared.openApplication(at: app.url, configuration: NSWorkspace.OpenConfiguration()) }
     }
 
@@ -256,7 +257,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         let cell = (tableView.makeView(withIdentifier: .init("cell"), owner: nil) as? AppCell) ?? AppCell()
         cell.identifier = .init("cell")
         cell.name.stringValue = app.name
-        cell.path.stringValue = app.isSettingsPane ? "Réglages Système" : app.url.deletingLastPathComponent().path
+        cell.path.stringValue = app.isAction ? "Système" : app.isSettingsPane ? "Réglages Système" : app.url.deletingLastPathComponent().path
             .replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")
             .replacingOccurrences(of: ".localized", with: "")
         cell.icon.image = icon(for: app)
@@ -265,12 +266,12 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     }
 
     private func icon(for app: AppEntry) -> NSImage? {
-        iconCache[app.url.path]
+        app.isAction ? SystemActions.symbol(for: app.id) : iconCache[app.url.path]
     }
 
     /// Charge toutes les icônes en arrière-plan après chaque scan : la frappe ne lit jamais le disque.
     private func preloadIcons() {
-        let missing = scanner.apps.map(\.url.path).filter { iconCache[$0] == nil }
+        let missing = Set(scanner.apps.filter { !$0.isAction }.map(\.url.path)).filter { iconCache[$0] == nil }
         guard !missing.isEmpty else { return }
         iconQueue.async {
             var loaded: [String: NSImage] = [:]

@@ -9,7 +9,8 @@ struct AppEntry {
     var openURL: URL? = nil
 
     var id: String { openURL?.absoluteString ?? url.path }
-    var isSettingsPane: Bool { openURL != nil }
+    var isSettingsPane: Bool { openURL?.scheme == "x-apple.systempreferences" }
+    var isAction: Bool { openURL?.scheme == "action" }
 }
 
 /// Liste les .app des dossiers d'applications, sans passer par Spotlight.
@@ -69,6 +70,7 @@ final class AppScanner {
             }
         }
         result += SystemSettingsPanes.entries()
+        result += SystemActions.entries()
         return result.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 

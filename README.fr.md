@@ -25,6 +25,8 @@ MacAppLauncher liste lui-même les `.app` des dossiers d'applications. Il trouve
 - **Toujours à jour** : la liste se met à jour quand une app est installée ou supprimée.
 - **Liquid Glass** : panneau en verre natif de macOS 26.
 - **Léger** : environ 55 Mo de mémoire, aucune dépendance, vit dans la barre des menus.
+- **Panneaux de Réglages Système** : taper `son`, `wifi`, `clavier`… ouvre directement le panneau.
+- **Actions du menu Pomme** : suspendre l'activité, redémarrer, éteindre, verrouiller l'écran, fermer la session.
 - **Lancement à l'ouverture de session** : un clic dans le menu.
 
 ### Dossiers parcourus

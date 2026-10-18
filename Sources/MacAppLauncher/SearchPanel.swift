@@ -24,7 +24,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     init(scanner: AppScanner) {
         self.scanner = scanner
         panel = KeyPanel(contentRect: NSRect(x: 0, y: 0, width: 640, height: 60),
-                         styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel],
+                         styleMask: [.borderless, .nonactivatingPanel],
                          backing: .buffered, defer: false)
         super.init()
         setupPanel()
@@ -48,11 +48,17 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
 
-        let bg = NSVisualEffectView()
-        bg.material = .popover
-        bg.state = .active
-        bg.blendingMode = .behindWindow
-        panel.contentView = bg
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+
+        // Liquid Glass (macOS 26) : le verre porte le contenu.
+        let bg = NSView()
+        let glass = NSGlassEffectView()
+        glass.cornerRadius = 26
+        glass.style = .regular
+        glass.contentView = bg
+        panel.contentView = glass
 
         field.placeholderString = "Rechercher une app…"
         field.font = .systemFont(ofSize: 22, weight: .light)
@@ -71,6 +77,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         table.intercellSpacing = .zero
         table.style = .plain
         table.selectionHighlightStyle = .regular
+        table.backgroundColor = .clear
         table.dataSource = self
         table.delegate = self
         table.target = self
@@ -181,6 +188,10 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
 
     func numberOfRows(in tableView: NSTableView) -> Int { results.count }
 
+    func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        GlassRowView()
+    }
+
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let app = results[row]
         let cell = (tableView.makeView(withIdentifier: .init("cell"), owner: nil) as? AppCell) ?? AppCell()
@@ -262,4 +273,15 @@ final class AppCell: NSTableCellView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+}
+
+/// Sélection en pastille translucide arrondie, plutôt que la barre bleue pleine.
+final class GlassRowView: NSTableRowView {
+    override func drawSelection(in dirtyRect: NSRect) {
+        let r = bounds.insetBy(dx: 6, dy: 2)
+        NSColor.labelColor.withAlphaComponent(0.12).setFill()
+        NSBezierPath(roundedRect: r, xRadius: 12, yRadius: 12).fill()
+    }
+    override var isEmphasized: Bool { get { false } set {} }
+    override var interiorBackgroundStyle: NSView.BackgroundStyle { .normal }
 }

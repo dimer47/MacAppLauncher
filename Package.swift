@@ -1,10 +1,11 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.2
 import PackageDescription
 
 let package = Package(
     name: "MacAppLauncher",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v26)],
     targets: [
-        .executableTarget(name: "MacAppLauncher", path: "Sources/MacAppLauncher")
+        .executableTarget(name: "MacAppLauncher", path: "Sources/MacAppLauncher",
+                          swiftSettings: [.swiftLanguageMode(.v5)])
     ]
 )

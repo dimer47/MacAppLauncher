@@ -19,7 +19,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
     private let maxRows = 9
     private var warmed = false
     private var glassHeight: NSLayoutConstraint!
-    private var maxHeight: CGFloat { height(rows: maxRows) + 24 }
+    private var maxHeight: CGFloat { height(rows: maxRows) + 48 }
 
     /// Hauteur exacte du verre : champ (56) + lignes + marge basse, sans ligne coupée.
     private func height(rows: Int) -> CGFloat { rows > 0 ? 56 + CGFloat(rows) * rowHeight + 10 : 60 }
@@ -82,12 +82,12 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         root.addSubview(glass)
         glassHeight = glass.heightAnchor.constraint(equalToConstant: 60)
         NSLayoutConstraint.activate([
-            glass.topAnchor.constraint(equalTo: root.topAnchor, constant: 12),
-            glass.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 24),
-            glass.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -24),
+            glass.topAnchor.constraint(equalTo: root.topAnchor, constant: 40),
+            glass.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 48),
+            glass.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -48),
             glassHeight,
         ])
-        panel.setContentSize(NSSize(width: 640 + 48, height: maxHeight))
+        panel.setContentSize(NSSize(width: 640 + 96, height: maxHeight + 40))
 
         field.placeholderString = "Rechercher une app…"
         field.font = .systemFont(ofSize: 22, weight: .light)
@@ -125,11 +125,11 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         NSLayoutConstraint.activate([
             field.leadingAnchor.constraint(equalTo: bg.leadingAnchor, constant: 18),
             field.trailingAnchor.constraint(equalTo: bg.trailingAnchor, constant: -18),
-            field.topAnchor.constraint(equalTo: bg.topAnchor, constant: 14),
-            field.heightAnchor.constraint(equalToConstant: 32),
+            // Centré verticalement dans la bande de 60 pt (une hauteur fixe collait le texte en haut).
+            field.centerYAnchor.constraint(equalTo: bg.topAnchor, constant: 30),
             scroll.leadingAnchor.constraint(equalTo: bg.leadingAnchor, constant: 6),
             scroll.trailingAnchor.constraint(equalTo: bg.trailingAnchor, constant: -6),
-            scroll.topAnchor.constraint(equalTo: field.bottomAnchor, constant: 10),
+            scroll.topAnchor.constraint(equalTo: bg.topAnchor, constant: 56),
             scroll.bottomAnchor.constraint(equalTo: bg.bottomAnchor, constant: -10),
         ])
     }
@@ -158,7 +158,7 @@ final class SearchPanel: NSObject, NSTextFieldDelegate, NSTableViewDataSource, N
         refresh()
         if let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
             let f = screen.visibleFrame
-            let top = f.maxY - f.height * 0.22
+            let top = f.maxY - f.height * 0.22 + 40 // +40 : marge transparente au-dessus du verre
             panel.setFrameTopLeftPoint(NSPoint(x: f.midX - panel.frame.width / 2, y: top))
         }
         NSApp.activate(ignoringOtherApps: true)

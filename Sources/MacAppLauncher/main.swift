@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.button?.image = NSImage(systemSymbolName: "square.grid.3x3.fill", accessibilityDescription: "MacAppLauncher")
         let menu = NSMenu()
         menu.delegate = self
+        Updater.shared.start()
         statusItem.menu = menu
     }
 
@@ -81,6 +82,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(login)
         menu.addItem(item("Rescanner les apps (\(scanner.apps.count))", #selector(rescan)))
         menu.addItem(.separator())
+        menu.addItem(item("Rechercher les mises à jour…", #selector(checkUpdates)))
+        let au = item("Mises à jour automatiques", #selector(toggleAutoUpdate))
+        au.state = Updater.auto ? .on : .off
+        menu.addItem(au)
+        let v = item("Version \(Updater.installed)", nil)
+        v.isEnabled = false
+        menu.addItem(v)
+        menu.addItem(.separator())
         menu.addItem(item("Quitter", #selector(quit), key: "q"))
     }
 
@@ -92,6 +101,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func openSearch() { search.show() }
     @objc private func rescan() { scanner.rescan() }
+    @objc private func checkUpdates() { Updater.shared.check(silent: false) }
+
+    @objc private func toggleAutoUpdate() {
+        Updater.auto.toggle()
+        Updater.shared.start()
+    }
+
     @objc private func quit() { NSApp.terminate(nil) }
 
     @objc private func toggleLogin() {
